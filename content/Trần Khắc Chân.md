@@ -15,3 +15,4 @@ Có một điều may mắn cho ông trước khi ra trận, là bên Chiêm Th�
 Trần Khắc Chân tiếp tục trở thành một vị tướng lớn trong giai đoạn cuối của nhà Trần. Đến năm 1399, ông cùng một số người âm mưu ám sát Hồ Quý Ly nhưng không thành, ông bị xử tử cùng với 400 người khác.
 ## 📚 Nguồn
 [Trần Khát Chân – Wikipedia tiếng Việt](https://vi.wikipedia.org/wiki/Tr%E1%BA%A7n_Kh%C3%A1t_Ch%C3%A2n)
+[TikTok - Make Your Day](https://www.tiktok.com/@huymaketa/video/7284594757798481154?is_from_webapp=1&sender_device=pc)
