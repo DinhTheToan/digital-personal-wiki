@@ -1,13 +1,464 @@
 @use "./variables.scss" as *;
 
-// put your custom CSS here!
-.recent-notes li:has(a[href$="/"]),
-.recent-notes li:has(a[href$="/index"]),
-.recent-notes li:has(a[href="."]),
-.recent-notes li:has(a[href="./"]) {
-  display: none;
+// =============================================================================
+// DIGITAL ENCYCLOPEDIA & KNOWLEDGE LIBRARY THEME
+// =============================================================================
+
+// --- 1. Global Typography & Smooth Rendering ---
+html {
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
-.recent-notes li:has(a[href*="/tags/"]),
-.recent-notes li:has(a[href^="tags/"]) {
-  display: none;
+
+body {
+  letter-spacing: -0.01em;
+}
+
+// Gentle, eye-friendly text highlight & selection
+mark,
+.text-highlight {
+  background-color: var(--textHighlight) !important;
+  color: inherit !important;
+  padding: 0.12em 0.35em !important;
+  border-radius: 4px !important;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--secondary) 25%, transparent) !important;
+  color: inherit !important;
+}
+
+// Custom modern sleek scrollbar
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--lightgray);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--gray);
+}
+
+// --- 2. Brand & Header (Online Library Identity) ---
+.page-title {
+  font-family: var(--headerFont);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0.5rem 0 1rem 0;
+
+  a {
+    color: var(--dark);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: color 0.15s ease;
+
+    &:hover {
+      color: var(--secondary);
+    }
+  }
+}
+
+// --- 3. Sidebar Section Headers & Structure ---
+.sidebar {
+  // Consistent section labels (scholarly catalog style)
+  h3 {
+    font-family: var(--bodyFont) !important;
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.08em !important;
+    color: var(--gray) !important;
+    margin: 1.25rem 0 0.5rem 0 !important;
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid var(--lightgray);
+    opacity: 0.85;
+  }
+}
+
+// --- 4. Recent Notes (Ghi chú gần đây) ---
+.recent-notes {
+  ul.recent-ul {
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+
+    li.recent-li {
+      margin: 0.2rem 0;
+
+      .section {
+        .desc > h3 {
+          margin: 0 !important;
+          border-bottom: none !important;
+          text-transform: none !important;
+          letter-spacing: normal !important;
+          font-size: 0.92rem !important;
+          font-weight: 500 !important;
+
+          > a {
+            display: block;
+            padding: 0.35rem 0.5rem;
+            border-radius: 6px;
+            color: var(--darkgray);
+            text-decoration: none;
+            transition: all 0.15s ease;
+
+            &:hover {
+              background-color: var(--highlight);
+              color: var(--secondary);
+              transform: translateX(2px);
+            }
+          }
+        }
+
+        .meta {
+          margin: 0 0 0.4rem 0.5rem;
+          font-size: 0.75rem;
+          color: var(--gray);
+          opacity: 0.8;
+        }
+      }
+    }
+  }
+
+  // Filter out index & tag pages from recent notes list
+  li:has(a[href$="/"]),
+  li:has(a[href$="/index"]),
+  li:has(a[href="."]),
+  li:has(a[href="./"]),
+  li:has(a[href*="/tags/"]),
+  li:has(a[href^="tags/"]) {
+    display: none;
+  }
+}
+
+// --- 5. Tag Tree Box (Cây thẻ phân cấp) ---
+.tag-listbox {
+  margin-top: 1rem;
+
+  .tag-tree-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .tag-tree-sub {
+    margin-left: 0.65rem;
+    padding-left: 0.65rem;
+    border-left: 1px solid var(--lightgray);
+  }
+
+  .tag-tree-row {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.4rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover {
+      background-color: var(--highlight);
+
+      .tag-tree-label {
+        color: var(--secondary);
+      }
+    }
+  }
+
+  .tag-tree-label {
+    flex-grow: 1;
+    font-size: 0.88rem;
+    color: var(--darkgray);
+    text-decoration: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tag-tree-count {
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--gray);
+    background-color: var(--highlight);
+    padding: 0.05rem 0.4rem;
+    border-radius: 10px;
+    min-width: 1rem;
+    text-align: center;
+  }
+}
+
+// --- 6. Main Reading Column (Academic & Encyclopedia Look) ---
+.center {
+  max-width: 840px;
+  margin: 0 auto;
+}
+
+// Article Header
+.page-header {
+  margin-bottom: 2rem;
+
+  h1.article-title {
+    font-family: var(--headerFont);
+    font-size: 2.25rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--dark);
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid var(--lightgray);
+    line-height: 1.25;
+  }
+
+  .content-meta {
+    font-size: 0.82rem;
+    color: var(--gray);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+
+    time,
+    span {
+      display: inline-flex;
+      align-items: center;
+      background: transparent;
+      color: var(--gray);
+      border: 1px solid var(--lightgray);
+      padding: 0.15rem 0.55rem;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 500;
+    }
+  }
+}
+
+// Article Body Typography
+article {
+  font-family: var(--bodyFont);
+  font-size: 1.05rem;
+  line-height: 1.8;
+  color: var(--darkgray);
+
+  p {
+    margin: 1.2rem 0;
+  }
+
+  // Headings with classic encyclopedia hierarchy
+  h2 {
+    font-family: var(--headerFont);
+    font-size: 1.55rem;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    color: var(--dark);
+    margin: 2.25rem 0 1rem 0;
+    padding-bottom: 0.35rem;
+    border-bottom: 1px solid var(--lightgray);
+  }
+
+  h3 {
+    font-family: var(--headerFont);
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--dark);
+    margin: 1.75rem 0 0.75rem 0;
+  }
+
+  h4, h5, h6 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin: 1.5rem 0 0.5rem 0;
+  }
+
+  // Links with scholarly clean underline
+  a.internal {
+    color: var(--secondary);
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, var(--secondary) 40%, transparent);
+    text-underline-offset: 3px;
+    font-weight: 500;
+    transition: all 0.15s ease;
+
+    &:hover {
+      text-decoration-color: var(--secondary);
+      background-color: var(--highlight);
+      border-radius: 3px;
+    }
+  }
+
+  // Blockquotes (Encyclopedia excerpt / citation style) — excludes callouts
+  blockquote:not(.callout) {
+    margin: 1.5rem 0;
+    padding: 0.75rem 1.25rem;
+    border-left: 3px solid var(--secondary);
+    background-color: var(--highlight);
+    border-radius: 0 8px 8px 0;
+    color: var(--darkgray);
+    font-style: italic;
+
+    p {
+      margin: 0.5rem 0;
+    }
+  }
+
+  // Obsidian Callout refinement
+  .callout {
+    margin: 1.5rem 0;
+    border-radius: 8px;
+    font-style: normal;
+
+    .callout-title {
+      font-weight: 600;
+    }
+  }
+
+  // Tables (Academic data tables)
+  table {
+    width: 100%;
+    margin: 1.75rem 0;
+    border-collapse: collapse;
+    border: 1px solid var(--lightgray);
+    border-radius: 8px;
+    overflow: hidden;
+    font-size: 0.95rem;
+
+    th {
+      background-color: var(--lightgray);
+      color: var(--dark);
+      font-weight: 600;
+      padding: 0.65rem 0.9rem;
+      border: 1px solid var(--lightgray);
+      text-align: left;
+    }
+
+    td {
+      padding: 0.55rem 0.9rem;
+      border: 1px solid var(--lightgray);
+    }
+
+    tr:nth-child(even) td {
+      background-color: color-mix(in srgb, var(--lightgray) 30%, transparent);
+    }
+  }
+
+  // Code snippets
+  code {
+    font-family: var(--codeFont);
+    font-size: 0.88em;
+    background-color: var(--highlight);
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    border: 1px solid var(--lightgray);
+  }
+
+  pre > code {
+    border: none;
+    padding: 0;
+    background: transparent;
+  }
+}
+
+// --- 7. Right Sidebar (Graph & Table of Contents) ---
+.right.sidebar {
+  .graph {
+    .graph-outer {
+      border: 1px solid var(--lightgray);
+      border-radius: 12px;
+      background-color: var(--light);
+      padding: 0.5rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+    }
+  }
+
+  .toc {
+    button#toc {
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    ul {
+      border-left: 1px solid var(--lightgray);
+      padding-left: 0.75rem;
+
+      li > a {
+        font-size: 0.85rem;
+        color: var(--gray);
+        transition: color 0.15s ease;
+
+        &:hover,
+        &.in-view {
+          color: var(--secondary);
+          font-weight: 500;
+        }
+      }
+    }
+  }
+}
+
+// --- 8. Breadcrumbs ---
+.breadcrumb-container {
+  font-size: 0.82rem;
+  color: var(--gray);
+  margin-bottom: 0.75rem;
+
+  a {
+    color: var(--gray);
+    text-decoration: none;
+
+    &:hover {
+      color: var(--secondary);
+      text-decoration: underline;
+    }
+  }
+}
+
+// --- 9. Popover / Link Preview Cards ---
+.popover {
+  border-radius: 12px !important;
+  border: 1px solid var(--lightgray) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12) !important;
+  background-color: var(--light) !important;
+  padding: 1rem !important;
+}
+
+// --- 10. Footer ---
+footer {
+  margin-top: 4rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--lightgray);
+  font-size: 0.85rem;
+  color: var(--gray);
+  text-align: center;
+
+  ul {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    list-style: none;
+    padding: 0;
+    margin: 0.5rem 0;
+
+    a {
+      color: var(--gray);
+      text-decoration: none;
+      transition: color 0.15s ease;
+
+      &:hover {
+        color: var(--secondary);
+      }
+    }
+  }
 }
