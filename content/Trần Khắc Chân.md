@@ -6,7 +6,7 @@ tags:
   - "#lich-su/nhan-vat"
 ---
 > [!note] Tướng Trần Khắc Chân
-> ![[Pasted image 20261120174024.png]]
+> ![[tran-khac-chan.png]]
 *Trần Khắc Chân - Vị tướng cuối cùng giữ lại hào khí nhà Trần*
 
 

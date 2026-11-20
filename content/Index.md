@@ -1,4 +1,4 @@
-﻿---
+---
 title: Bắt đầu
 description: Kho tàng tri thức cá nhân, ghi chép học tập và kết nối ý tưởng của Đinh Thế Toàn.
 ---
@@ -15,7 +15,7 @@ Toàn bộ tài liệu trong thư viện được liên kết và cập nhật *
 * **📂 Cây phân cấp thẻ (Sidebar bên trái):** Toàn bộ bài viết được phân loại tự động theo thẻ (tags). Bạn chỉ cần nhấp vào các thẻ cha (như `dia-ly`, `lich-su`) để mở rộng các nhánh chủ đề con và xem số lượng tài liệu chi tiết.
 * **🕸️ Sơ đồ mạng lưới (Sidebar bên phải):** Đồ thị trực quan thể hiện mối quan hệ liên kết hai chiều giữa các ghi chú. Bạn có thể kéo thả, phóng to/thu nhỏ hoặc bấm vào từng nốt tròn để chuyển ngay đến bài viết liên quan.
 * **⚡ Tìm kiếm tức thì (`Ctrl + K` hoặc phím `/`):** Nhập bất kỳ từ khóa, khái niệm hay nhân vật nào để mở nhanh nội dung cần tra cứu.
-* **👁️ Xem trước nội dung (Page Preview):** Khi rê chuột lên các liên kết như[[Trần Khắc Chân]]] hay [[Việt Nam]], nội dung tóm tắt sẽ hiển thị ngay mà không cần rời trang hiện tại.
+* **👁️ Xem trước nội dung (Page Preview):** Khi rê chuột lên các liên kết như [[Trần Khắc Chân]], nội dung tóm tắt sẽ hiển thị ngay mà không cần rời trang hiện tại.
 
 ---
 
