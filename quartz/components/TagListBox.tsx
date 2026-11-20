@@ -59,13 +59,13 @@ export default ((userOpts?: Options) => {
       return null
     }
 
-    const renderNodes = (nodes: Map<string, TagNode>) => {
+    const renderNodes = (nodes: Map<string, TagNode>, isRoot = false) => {
       const sorted = Array.from(nodes.values()).sort((a, b) =>
         a.name.localeCompare(b.name, "vi")
       )
 
       return (
-        <ul className="tag-tree-list">
+        <ul className={classNames("tag-tree-list", isRoot ? "tag-tree-root" : "tag-tree-sub")}>
           {sorted.map((node) => {
             const hasChildren = node.children.size > 0
             const slug = `tags/${node.fullPath.toLowerCase().replace(/\s+/g, "-")}` as any
@@ -73,24 +73,38 @@ export default ((userOpts?: Options) => {
 
             if (hasChildren) {
               return (
-                <li key={node.fullPath} className="tag-tree-folder">
+                <li key={node.fullPath} className="tag-tree-item tag-tree-folder">
                   <details open>
                     <summary className="tag-tree-row">
-                      <span className="tag-caret">›</span>
+                      <span className="tag-caret-wrapper">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="tag-caret"
+                        >
+                          <polyline points="9 6 15 12 9 18"></polyline>
+                        </svg>
+                      </span>
                       <a href={href} className="internal tag-tree-label">
                         {node.name}
                       </a>
                       <span className="tag-tree-count">{node.count}</span>
                     </summary>
-                    {renderNodes(node.children)}
+                    {renderNodes(node.children, false)}
                   </details>
                 </li>
               )
             }
 
             return (
-              <li key={node.fullPath} className="tag-tree-leaf">
+              <li key={node.fullPath} className="tag-tree-item tag-tree-leaf">
                 <div className="tag-tree-row">
+                  <span className="tag-caret-spacer"></span>
                   <a href={href} className="internal tag-tree-label">
                     {node.name}
                   </a>
@@ -105,11 +119,112 @@ export default ((userOpts?: Options) => {
 
     return (
       <div className={classNames(displayClass, "tag-listbox")}>
-        <h3>{opts.title}</h3>
-        {renderNodes(root)}
+        {opts.title && <h3>{opts.title}</h3>}
+        {renderNodes(root, true)}
       </div>
     )
   }
+
+  TagListBox.css = `
+.tag-listbox {
+  min-height: 0;
+  overflow-y: auto;
+  margin-top: 1rem;
+}
+
+.tag-listbox > h3 {
+  margin: 0.5rem 0;
+  font-size: 1rem;
+  color: var(--dark);
+}
+
+.tag-tree-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.tag-tree-sub {
+  margin-left: 0.75rem;
+  padding-left: 0.75rem;
+  border-left: 1px solid var(--lightgray);
+}
+
+.tag-tree-item {
+  margin: 0.15rem 0;
+}
+
+.tag-tree-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.4rem;
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s ease;
+}
+
+.tag-tree-row:hover {
+  background-color: var(--highlight);
+}
+
+details > summary {
+  list-style: none;
+}
+
+details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.tag-caret-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
+.tag-caret {
+  width: 0.75rem;
+  height: 0.75rem;
+  color: var(--gray);
+  transition: transform 0.15s ease;
+}
+
+details[open] > summary .tag-caret {
+  transform: rotate(90deg);
+}
+
+.tag-caret-spacer {
+  width: 0.3rem;
+  flex-shrink: 0;
+}
+
+.tag-tree-label {
+  flex-grow: 1;
+  text-decoration: none;
+  color: var(--darkgray);
+  font-size: 0.9rem;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tag-tree-row:hover .tag-tree-label {
+  color: var(--secondary);
+}
+
+.tag-tree-count {
+  font-size: 0.8rem;
+  color: var(--gray);
+  min-width: 1.2rem;
+  text-align: right;
+  flex-shrink: 0;
+}
+`
 
   return TagListBox
 }) satisfies QuartzComponentConstructor

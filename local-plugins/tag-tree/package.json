@@ -1,0 +1,14 @@
+{
+  "name": "quartz-tag-tree",
+  "version": "1.0.0",
+  "description": "Hiển thị cây thẻ (tag tree) ở sidebar",
+  "type": "module",
+  "main": "index.js",
+  "quartz": {
+    "name": "tag-tree",
+    "displayName": "Tag Tree",
+    "description": "Hiển thị cây thẻ phân cấp ở sidebar trái",
+    "version": "1.0.0",
+    "category": "component"
+  }
+}

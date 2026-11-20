@@ -184,6 +184,11 @@ plugins:
     layout:
       position: left
       priority: 60
+  - source: "./local-plugins/tag-tree"
+    enabled: true
+    layout:
+      position: left
+      priority: 55
   - source: "@quartz-community/page-title"
     enabled: true
     layout:
@@ -230,6 +235,7 @@ plugins:
       title: Bài viết mới cập nhật
       limit: 6
       showTags: false
+      hideTagPages: true
     layout:
       position: left
       priority: 45
