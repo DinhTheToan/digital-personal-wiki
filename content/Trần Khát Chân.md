@@ -1,6 +1,6 @@
 ---
 ngày_tạo: 2026-11-20
-chủ_đề: "#lịch-sử"
+chủ_đề: "#lich-su/nhan-vat"
 aliases: []
 ---
 
