@@ -230,7 +230,6 @@ plugins:
       title: Bài viết mới cập nhật
       limit: 6
       showTags: false
-      filter: not-index
     layout:
       position: left
       priority: 45

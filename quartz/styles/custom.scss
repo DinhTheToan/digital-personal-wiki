@@ -1,3 +1,133 @@
 @use "./variables.scss" as *;
 
 // put your custom CSS here!
+.recent-notes li:has(a[href$="/"]),
+.recent-notes li:has(a[href$="/index"]),
+.recent-notes li:has(a[href="."]),
+.recent-notes li:has(a[href="./"]) {
+  display: none;
+}
+
+// Khối Danh sách thẻ giống Obsidian bên cột trái
+.tag-listbox {
+  margin-top: 1.4rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--lightgray); // Đường kẻ chia với Bài viết mới cập nhật
+
+  h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 0.65rem 0;
+    color: var(--dark);
+  }
+}
+
+.tag-tree-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  // Thụt lề cho các thẻ con bên trong (ví dụ nhan-vat nằm dưới lich-su)
+  .tag-tree-list {
+    margin-left: 0.65rem;
+    padding-left: 0.75rem;
+    border-left: 1px solid var(--lightgray);
+  }
+}
+
+.tag-tree-folder > details > summary {
+  list-style: none;
+  cursor: pointer;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+}
+
+.tag-tree-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.3rem 0.55rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background-color: var(--highlight);
+  }
+}
+
+.tag-caret {
+  display: inline-block;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--gray);
+  transition: transform 0.15s ease;
+}
+
+details[open] > summary .tag-caret {
+  transform: rotate(90deg);
+}
+
+.tag-tree-label {
+  flex: 1;
+  color: var(--darkgray) !important;
+  font-weight: 400 !important;
+  border-bottom: none !important;
+  background: none !important;
+  text-decoration: none !important;
+
+  &:hover {
+    color: var(--dark) !important;
+  }
+}
+
+.tag-tree-count {
+  font-size: 0.8rem;
+  color: var(--gray);
+  font-variant-numeric: tabular-nums;
+}
+
+// Tiêu đề, đường kẻ phân tách và giao diện gọn cho @quartz-community/tag-list ở cột trái
+.left-sidebar .tag-list,
+aside.left .tag-list {
+  margin-top: 1.4rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--lightgray);
+
+  &::before {
+    content: "Danh sách thẻ";
+    display: block;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 0.65rem;
+  }
+
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  a.internal.tag-link {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 400;
+    color: var(--darkgray);
+    background-color: transparent;
+    text-decoration: none;
+
+    &:hover {
+      color: var(--dark);
+      background-color: var(--highlight);
+    }
+  }
+}

@@ -41,6 +41,7 @@
   "dependencies": {
     "@clack/prompts": "^1.8.0",
     "@floating-ui/dom": "^1.7.4",
+    "@local/tag-tree": "file:local-plugins/tag-tree",
     "@myriaddreamin/rehype-typst": "^0.7.0",
     "@napi-rs/simple-git": "1.1.0",
     "@quartz-community/alias-redirects": "^1.0.3",
@@ -106,6 +107,7 @@
     "preact-render-to-string": "^6.6.5",
     "pretty-bytes": "^7.1.0",
     "pretty-time": "^1.1.0",
+    "quartz-tag-tree": "file:local-plugins/tag-tree",
     "remark-frontmatter": "^5.0.0",
     "remark-parse": "^11.0.0",
     "remark-rehype": "^11.1.2",

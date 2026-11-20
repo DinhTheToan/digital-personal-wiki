@@ -6,84 +6,110 @@ interface Options {
   title?: string
 }
 
+interface TagNode {
+  name: string
+  fullPath: string
+  count: number
+  children: Map<string, TagNode>
+}
+
 const defaultOptions: Options = {
-  title: "Chủ đề (Tags)",
+  title: "Danh sách thẻ",
 }
 
 export default ((userOpts?: Options) => {
   const opts = { ...defaultOptions, ...userOpts }
 
   const TagListBox: QuartzComponent = ({ allFiles, fileData, displayClass }: QuartzComponentProps) => {
-    const tagCounts = new Map<string, number>()
+    const root = new Map<string, TagNode>()
 
     for (const file of allFiles) {
       const tags = file.frontmatter?.tags ?? []
+      const seenInFile = new Set<string>()
+
       for (const rawTag of tags) {
-        const tag = String(rawTag).trim()
-        if (!tag) continue
-        tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1)
+        const cleanTag = String(rawTag).trim().replace(/^#/, "")
+        if (!cleanTag) continue
+
+        const parts = cleanTag.split("/").filter(Boolean)
+        let currentMap = root
+        let currentPath = ""
+
+        for (const part of parts) {
+          currentPath = currentPath ? `${currentPath}/${part}` : part
+          if (!currentMap.has(part)) {
+            currentMap.set(part, {
+              name: part,
+              fullPath: currentPath,
+              count: 0,
+              children: new Map(),
+            })
+          }
+          const node = currentMap.get(part)!
+          if (!seenInFile.has(currentPath)) {
+            node.count += 1
+            seenInFile.add(currentPath)
+          }
+          currentMap = node.children
+        }
       }
     }
 
-    const sortedTags = Array.from(tagCounts.entries()).sort((a, b) =>
-      a[0].localeCompare(b[0], "vi")
-    )
-
-    if (sortedTags.length === 0) {
+    if (root.size === 0) {
       return null
+    }
+
+    const renderNodes = (nodes: Map<string, TagNode>) => {
+      const sorted = Array.from(nodes.values()).sort((a, b) =>
+        a.name.localeCompare(b.name, "vi")
+      )
+
+      return (
+        <ul className="tag-tree-list">
+          {sorted.map((node) => {
+            const hasChildren = node.children.size > 0
+            const slug = `tags/${node.fullPath.toLowerCase().replace(/\s+/g, "-")}` as any
+            const href = resolveRelative(fileData.slug!, slug)
+
+            if (hasChildren) {
+              return (
+                <li key={node.fullPath} className="tag-tree-folder">
+                  <details open>
+                    <summary className="tag-tree-row">
+                      <span className="tag-caret">›</span>
+                      <a href={href} className="internal tag-tree-label">
+                        {node.name}
+                      </a>
+                      <span className="tag-tree-count">{node.count}</span>
+                    </summary>
+                    {renderNodes(node.children)}
+                  </details>
+                </li>
+              )
+            }
+
+            return (
+              <li key={node.fullPath} className="tag-tree-leaf">
+                <div className="tag-tree-row">
+                  <a href={href} className="internal tag-tree-label">
+                    {node.name}
+                  </a>
+                  <span className="tag-tree-count">{node.count}</span>
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+      )
     }
 
     return (
       <div className={classNames(displayClass, "tag-listbox")}>
         <h3>{opts.title}</h3>
-        <ul className="tag-listbox-items">
-          {sortedTags.map(([tag, count]) => {
-            const slug = `tags/${tag.toLowerCase().replace(/\s+/g, "-")}` as any
-            const href = resolveRelative(fileData.slug!, slug)
-            return (
-              <li key={tag}>
-                <a href={href} className="internal tag-link">
-                  #{tag} <span className="tag-count">({count})</span>
-                </a>
-              </li>
-            )
-          })}
-        </ul>
+        {renderNodes(root)}
       </div>
     )
   }
-
-  TagListBox.css = `
-  .tag-listbox {
-    margin-top: 1.5rem;
-  }
-  .tag-listbox h3 {
-    font-size: 1rem;
-    margin-bottom: 0.6rem;
-  }
-  .tag-listbox-items {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.45rem;
-  }
-  .tag-listbox-items li a {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    padding: 0.2rem 0.55rem;
-    border-radius: 6px;
-    background-color: var(--highlight);
-    font-size: 0.85rem;
-    text-decoration: none;
-  }
-  .tag-count {
-    opacity: 0.7;
-    font-size: 0.78rem;
-  }
-  `
 
   return TagListBox
 }) satisfies QuartzComponentConstructor
