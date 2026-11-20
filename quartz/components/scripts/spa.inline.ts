@@ -240,3 +240,27 @@ if (!customElements.get("route-announcer")) {
     },
   )
 }
+
+document.querySelectorAll("aside.left, .left-sidebar, .sidebar.left").forEach((sidebar) => {
+  const tagLinks = Array.from(sidebar.querySelectorAll("a.internal.tag-link"))
+  if (tagLinks.length === 0 || sidebar.querySelector(".sidebar-tag-section")) return
+
+  const section = document.createElement("div")
+  section.className = "sidebar-tag-section"
+
+  const title = document.createElement("h3")
+  title.className = "sidebar-tag-title"
+  title.textContent = "Danh sách thẻ"
+
+  const items = document.createElement("div")
+  items.className = "sidebar-tag-items"
+
+  const firstLink = tagLinks[0]
+  firstLink.parentNode?.insertBefore(section, firstLink)
+  section.appendChild(title)
+  section.appendChild(items)
+
+  tagLinks.forEach((link) => {
+    items.appendChild(link)
+  })
+})
