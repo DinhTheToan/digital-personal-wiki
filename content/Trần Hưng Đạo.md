@@ -4,6 +4,7 @@ ngày_tạo:
 chủ_đề: "#"
 aliases: []
 tags:
+  - lich-su/nhan-vat
 ---
 
 ## 💡 Nội dung
