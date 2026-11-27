@@ -143,3 +143,8 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .crumbs button:hover { color: var(--ink); }
 .crumbs button:last-child:not(:first-child), .crumbs span + button:last-child { color: var(--ink); }
 .gal-sub { margin: 48px 0 18px; }
+
+.cover-tools { position: absolute; left: 40px; bottom: 26px; z-index: 2; display: flex; align-items: center; gap: 10px; font-size: 12px; }
+.cover-tools button { background: var(--accent); padding: 6px 12px; border-radius: 2px; font-weight: 600; font-size: 12px; }
+.cover-tools button:disabled { opacity: 0.6; cursor: default; }
+.cover-tools span { color: var(--ink-45); }

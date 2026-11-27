@@ -465,6 +465,7 @@ function Reader({ note, notes, onClose, onOpen }) {
             {note.image ? <img src={note.image} alt="" onLoad={(e) => e.target.classList.add('on')} ref={(el) => el?.complete && el.classList.add('on')} /> : <span>{pad3(note.id)}</span>}
           </div>
         </div>
+        {import.meta.env.DEV && <CoverTools note={note} />}
         <div className="right" ref={body}>
           <div className="meta">
             ({pad3(note.id)}) NOTE · {new Date(note.date).toLocaleDateString('vi-VN')}
@@ -491,5 +492,44 @@ function Reader({ note, notes, onClose, onOpen }) {
         </div>
       </div>
     </dialog>
+  );
+}
+
+// Chỉ hiện khi chạy `npm run dev` (máy bạn): thêm/đổi/xóa ảnh bìa cho note, tự ghi vào vault
+function CoverTools({ note }) {
+  const input = useRef(null);
+  const [busy, setBusy] = useState(false);
+  const send = async (file) => {
+    if (!file || !/^image\//.test(file.type)) return;
+    setBusy(true);
+    await fetch('/__api/cover?slug=' + encodeURIComponent(note.slug), {
+      method: 'POST',
+      headers: { 'x-filename': encodeURIComponent(file.name) },
+      body: file,
+    });
+    // vite sẽ tự reload khi content.json được build lại
+    setTimeout(() => setBusy(false), 6000);
+  };
+  const remove = async () => {
+    setBusy(true);
+    await fetch('/__api/cover?slug=' + encodeURIComponent(note.slug), { method: 'DELETE' });
+    setTimeout(() => setBusy(false), 6000);
+  };
+  useEffect(() => {
+    const over = (e) => e.preventDefault();
+    const drop = (e) => { e.preventDefault(); send(e.dataTransfer.files[0]); };
+    addEventListener('dragover', over);
+    addEventListener('drop', drop);
+    return () => { removeEventListener('dragover', over); removeEventListener('drop', drop); };
+  });
+  return (
+    <div className="cover-tools">
+      <input ref={input} type="file" accept="image/*" hidden onChange={(e) => send(e.target.files[0])} />
+      <button onClick={() => input.current.click()} disabled={busy}>
+        {busy ? 'Đang xử lý…' : note.image ? 'Đổi ảnh bìa' : '+ Thêm ảnh bìa'}
+      </button>
+      {note.image && !busy && <button onClick={remove}>Xóa ảnh</button>}
+      {!busy && <span>hoặc kéo thả ảnh vào đây</span>}
+    </div>
   );
 }
