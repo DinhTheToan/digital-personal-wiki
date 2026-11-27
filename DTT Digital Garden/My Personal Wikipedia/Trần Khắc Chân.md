@@ -5,6 +5,7 @@ aliases:
   - Trần Khát Chân
 tags:
   - lich-su/nhan-vat
+image: "/covers/tran-khac-chan-cover-1795794272023.jpg"
 ---
 ## 💡 Nội dung
 Trần Khắc Chân (hay còn gọi là Trần Khát Chân), sinh năm 1370 và mất năm 1399, là một danh tướng nổi tiếng cuối thời nhà Trần.
