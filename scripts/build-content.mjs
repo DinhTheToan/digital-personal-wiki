@@ -6,7 +6,7 @@ import matter from 'gray-matter';
 import { marked } from 'marked';
 import sharp from 'sharp';
 
-const LOCAL_VAULT = path.resolve('./vault');
+const LOCAL_VAULT = path.resolve('./DTT Digital Garden');
 const CFG_PATH = path.resolve('./vault.config.json');
 const OUT = path.resolve('public');
 const IMG_DIR = path.join(OUT, 'img');

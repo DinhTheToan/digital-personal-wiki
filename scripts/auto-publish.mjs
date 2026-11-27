@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execSync } from 'node:child_process';
 
-const VAULT = path.resolve('./vault');
+const VAULT = path.resolve('./DTT Digital Garden');
 let timer;
 let running = false;
 
@@ -11,8 +11,8 @@ function syncToGit() {
   if (running) return;
   running = true;
   try {
-    execSync('git add vault', { stdio: 'ignore' });
-    const diff = execSync('git status --porcelain vault').toString().trim();
+    execSync('git add "DTT Digital Garden"', { stdio: 'ignore' });
+    const diff = execSync('git status --porcelain "DTT Digital Garden"').toString().trim();
     if (diff) {
       execSync('git commit -m "auto: update notes"', { stdio: 'ignore' });
       execSync('git push', { stdio: 'ignore' });
