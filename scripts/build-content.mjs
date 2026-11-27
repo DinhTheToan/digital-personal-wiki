@@ -60,6 +60,7 @@ export async function buildContent() {
   (function walk(dir) {
     for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
       if (e.name.startsWith('.')) continue;
+      if (e.isDirectory() && SKIP_DIRS.has(e.name.toLowerCase())) continue;
       const p = path.join(dir, e.name);
       if (e.isDirectory()) walk(p);
       else if (/\.md$/i.test(e.name)) mdFiles.push(p);
