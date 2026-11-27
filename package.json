@@ -4,8 +4,9 @@
   "type": "module",
   "scripts": {
     "content": "node scripts/build-content.mjs",
-    "dev": "npm run content && vite",
-    "build": "npm run content && vite build",
+    "dev": "node scripts/dev.mjs",
+    "build": "node scripts/build-content.mjs && vite build",
+    "publish": "node scripts/publish.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
