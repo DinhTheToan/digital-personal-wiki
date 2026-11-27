@@ -6,6 +6,7 @@ aliases:
   - Hưng Đạo Đại vương
 tags:
   - lich-su/nhan-vat
+image: "/covers/tran-hung-dao-cover-1795790660910.jpg"
 ---
 
 ## 💡 Nội dung
