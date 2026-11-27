@@ -3,5 +3,9 @@ dist
 public/content.json
 public/search.json
 public/img
+public/n
+public/rss.xml
+public/sitemap.xml
+public/llms.txt
 
 .obsidian

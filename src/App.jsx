@@ -4,8 +4,11 @@ import MiniSearch from 'minisearch';
 const CARD_W = 220;
 const CARD_H = 275 + 56;
 const SPACING = 520; // khoảng cách z giữa các card
-const QUOTE = '“Chúng ta giờ đây được kết nối bằng Internet, như các nơ-ron trong một bộ não khổng lồ.”';
-const QUOTE_BY = 'STEPHEN HAWKING';
+const STATUS_META = {
+  seed: { icon: '🌱', label: 'Hạt giống' },
+  budding: { icon: '🌿', label: 'Đang lớn' },
+  evergreen: { icon: '🌳', label: 'Hoàn thiện' },
+};
 
 // PRNG có seed để bố cục ổn định mỗi lần tải
 function rng(seed) {
@@ -23,18 +26,22 @@ function useStore() {
   const [data, setData] = useState(null);
   const [mini, setMini] = useState(null);
   const [labels, setLabels] = useState({});
+  const [quotes, setQuotes] = useState([]);
+  const [activity, setActivity] = useState({});
   useEffect(() => {
     Promise.all([fetch('/content.json').then((r) => r.json()), fetch('/search.json').then((r) => r.json())]).then(
       ([c, s]) => {
-        const ms = new MiniSearch({ fields: ['title', 'tags', 'summary', 'body'], storeFields: ['id'] });
+        const ms = new MiniSearch({ fields: ['title', 'aliases', 'tags', 'summary', 'body'], storeFields: ['id'] });
         ms.addAll(s);
         setData(c.notes);
         setLabels(c.labels || {});
+        setQuotes(c.quotes || []);
+        setActivity(c.activity || {});
         setMini(ms);
       }
     );
   }, []);
-  return { notes: data, mini, labels };
+  return { notes: data, mini, labels, quotes, activity };
 }
 
 let fromRect = null; // rect của card được bấm, dùng cho hiệu ứng morph
@@ -50,10 +57,18 @@ let backPath = '/'; // nơi quay về khi đóng bài đọc
 
 export default function App() {
   useEffect(initAdmin, []);
-  const { notes, mini, labels } = useStore();
+  const { notes, mini, labels, quotes, activity } = useStore();
   const [query, setQuery] = useState(() => new URLSearchParams(location.search).get('q') || '');
   const [open, setOpen] = useState(noteFromPath);
   const [gallery, setGallery] = useState(galleryFromPath);
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem('theme', theme);
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', theme === 'dark' ? '#161614' : '#F5F3EE');
+  }, [theme]);
 
   // đồng bộ URL (chỉ khi đang ở canvas)
   useEffect(() => {
@@ -103,35 +118,52 @@ export default function App() {
     return new Set(hits.map((h) => h.id));
   }, [notes, mini, query]);
 
+  const openRandom = useCallback(() => {
+    if (!notes?.length) return;
+    if (!gallery && innerWidth >= 600) {
+      window.dispatchEvent(new Event('cam-random'));
+    } else {
+      const pool = notes.length > 1 ? notes.filter((n) => n.slug !== open) : notes;
+      openNote(pool[Math.floor(Math.random() * pool.length)].slug);
+    }
+  }, [notes, gallery, open, openNote]);
+
   if (!notes) return <div className="loading">…</div>;
   const current = notes.find((n) => n.slug === open);
 
   return (
     <>
-      <Canvas notes={notes} matches={matches} onOpen={openNote} dim={!!current} query={query} />
-      {gallery && <Gallery notes={notes} tag={gallery.tag} onTag={openGallery} onOpen={openNote} labels={labels} />}
+      <Canvas notes={notes} matches={matches} onOpen={openNote} dim={!!current} query={query} quotes={quotes} />
+      {gallery && <Gallery notes={notes} tag={gallery.tag} onTag={openGallery} onOpen={openNote} labels={labels} activity={activity} />}
       <Chrome
         notes={notes} query={query} setQuery={setQuery} count={matches?.size}
         inGallery={!!gallery}
+        theme={theme}
+        onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+        onRandom={openRandom}
         onTopics={() => (gallery ? closeGallery() : openGallery(null))}
         onHome={() => { if (gallery) closeGallery(); window.dispatchEvent(new Event('cam-reset')); }}
       />
-      {current && <Reader note={current} notes={notes} onClose={closeNote} onOpen={openNote} />}
+      {current && <Reader note={current} notes={notes} onClose={closeNote} onOpen={openNote} theme={theme} />}
     </>
   );
 }
 
-function Chrome({ notes, query, setQuery, count, inGallery, onTopics, onHome }) {
+function Chrome({ notes, query, setQuery, count, inGallery, theme, onToggleTheme, onRandom, onTopics, onHome }) {
   return (
     <>
       <button className="brand" onClick={onHome}>
         digital.wiki
       </button>
       <div className="meta tr">
+        <button className="icon-btn" onClick={onRandom} title="Bay tới note ngẫu nhiên">🎲</button>
+        <button className="icon-btn" onClick={onToggleTheme} title={theme === 'dark' ? 'Chế độ sáng' : 'Chế độ đọc đêm'}>
+          {theme === 'dark' ? '☀' : '◐'}
+        </button>
         <button className={'topics-btn' + (inGallery ? ' on' : '')} onClick={onTopics}>
           {inGallery ? 'CANVAS ×' : 'TOPICS'}
         </button>
-        NOTES ({pad3(notes.length)})
+        <span className="notes-count">NOTES ({pad3(notes.length)})</span>
       </div>
       {!inGallery && <div className="dock">
         <label className="pill">
@@ -154,14 +186,14 @@ const prettify = (seg) => {
   return s.charAt(0).toUpperCase() + s.slice(1);
 };
 
-function Gallery({ notes, tag, onTag, onOpen, labels }) {
+function Gallery({ notes, tag, onTag, onOpen, labels, activity }) {
   const label = (seg) => labels[seg] || labels[seg.toLowerCase()] || prettify(seg);
   const base = tag || '';
-  const depth = tag ? tag.split('/').length : 0;
 
-  // thư mục con trực tiếp + note nằm đúng tại tag này
-  const { folders, direct } = useMemo(() => {
+  // thư mục con trực tiếp + note nằm đúng tại tag này (tách note MOC được ghim)
+  const { folders, pinned, direct } = useMemo(() => {
     const f = new Map();
+    const p = [];
     const d = [];
     for (const n of notes) {
       const seen = new Set();
@@ -169,7 +201,10 @@ function Gallery({ notes, tag, onTag, onOpen, labels }) {
         if (base && t !== base && !t.startsWith(base + '/')) continue;
         const rest = base ? t.slice(base.length + 1) : t;
         if (!rest) {
-          if (!seen.has('.')) { seen.add('.'); d.push(n); }
+          if (!seen.has('.')) {
+            seen.add('.');
+            (n.moc ? p : d).push(n);
+          }
           continue;
         }
         const seg = rest.split('/')[0];
@@ -180,11 +215,10 @@ function Gallery({ notes, tag, onTag, onOpen, labels }) {
       }
     }
     const sorted = [...f].sort((a, b) => b[1].length - a[1].length || label(a[0]).localeCompare(label(b[0])));
-    return { folders: sorted, direct: d };
+    return { folders: sorted, pinned: p, direct: d };
   }, [notes, base, labels]);
 
   const crumbs = tag ? tag.split('/') : [];
-  const parent = crumbs.slice(0, -1).join('/') || null;
 
   return (
     <div className="gallery">
@@ -200,7 +234,23 @@ function Gallery({ notes, tag, onTag, onOpen, labels }) {
         </div>
         <h1 className="gal-title">{tag ? label(crumbs[crumbs.length - 1]) : 'Chủ đề'}</h1>
 
-        {folders.length === 0 && direct.length === 0 && (
+        {!tag && <Heatmap activity={activity} />}
+
+        {pinned.length > 0 && (
+          <div className="moc-section">
+            <div className="meta">📌 BẢN ĐỒ TỔNG QUAN (MOC)</div>
+            <div className="moc-list">
+              {pinned.map((n) => (
+                <button key={n.id} className="moc-card" onClick={() => onOpen(n.slug)}>
+                  <b>{n.title}</b>
+                  <span>{n.summary}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {folders.length === 0 && direct.length === 0 && pinned.length === 0 && (
           <p className="gal-empty">Chưa có chủ đề nào. Thêm <code>tags: lich-su/nhan-vat</code> vào note trong Obsidian.</p>
         )}
 
@@ -247,13 +297,48 @@ function Gallery({ notes, tag, onTag, onOpen, labels }) {
   );
 }
 
-function Canvas({ notes, matches, onOpen, dim, query }) {
+function Heatmap({ activity }) {
+  const days = useMemo(() => {
+    const arr = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    for (let i = 139; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      arr.push({ key, count: activity?.[key] || 0 });
+    }
+    return arr;
+  }, [activity]);
+  const total = days.reduce((s, d) => s + d.count, 0);
+  const lvl = (n) => (n === 0 ? 0 : n === 1 ? 1 : n === 2 ? 2 : 3);
+  return (
+    <div className="heatmap-wrap">
+      <div className="heatmap-head meta">
+        <span>NHỊP CHĂM VƯỜN · 20 TUẦN QUA</span>
+        <span>{total} LƯỢT TẠO / CẬP NHẬT</span>
+      </div>
+      <div className="heatmap">
+        {days.map((d) => (
+          <i key={d.key} className={`hm-${lvl(d.count)}`} title={`${d.key}: ${d.count} note`} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Canvas({ notes, matches, onOpen, dim, query, quotes }) {
   const viewport = useRef(null);
   const world = useRef(null);
   const cardEls = useRef([]);
   const cam = useRef({ x: 0, y: 0, z: 0, tx: 0, ty: 0, tz: 0 });
   const live = useRef({ matches, dim });
   live.current = { matches, dim };
+  const [qIdx, setQIdx] = useState(() => (quotes?.length ? Math.floor(Math.random() * quotes.length) : 0));
+  const activeQuote = quotes?.length ? quotes[qIdx % quotes.length] : {
+    text: '“Chúng ta giờ đây được kết nối bằng Internet, như các nơ-ron trong một bộ não khổng lồ.”',
+    by: 'STEPHEN HAWKING',
+  };
 
   // vị trí gốc (x,y,z) của từng card
   const base = useMemo(() => {
@@ -307,6 +392,17 @@ function Canvas({ notes, matches, onOpen, dim, query }) {
       if (moved > 6) e.stopPropagation();
     };
     const reset = () => { c.tx = 0; c.ty = 0; c.tz = 0; };
+    let flyTimer;
+    const flyRandom = () => {
+      if (!notes.length) return;
+      const idx = Math.floor(Math.random() * notes.length);
+      const b = base[idx];
+      c.tx = b.x;
+      c.ty = b.y;
+      c.tz = -b.z - 120;
+      clearTimeout(flyTimer);
+      flyTimer = setTimeout(() => onOpen(notes[idx].slug), 620);
+    };
 
     vp.addEventListener('wheel', onWheel, { passive: false });
     vp.addEventListener('pointerdown', onDown);
@@ -314,6 +410,7 @@ function Canvas({ notes, matches, onOpen, dim, query }) {
     addEventListener('pointerup', onUp);
     vp.addEventListener('click', onClickCap, true);
     addEventListener('cam-reset', reset);
+    addEventListener('cam-random', flyRandom);
 
     const frame = () => {
       const { matches: m } = live.current;
@@ -366,9 +463,11 @@ function Canvas({ notes, matches, onOpen, dim, query }) {
       removeEventListener('pointermove', onMove);
       removeEventListener('pointerup', onUp);
       vp.removeEventListener('click', onClickCap, true);
+      clearTimeout(flyTimer);
       removeEventListener('cam-reset', reset);
+      removeEventListener('cam-random', flyRandom);
     };
-  }, [notes, base, maxZ, narrow]);
+  }, [notes, base, maxZ, narrow, onOpen]);
 
   // mobile: lưới 2 cột
   if (narrow) {
@@ -393,10 +492,10 @@ function Canvas({ notes, matches, onOpen, dim, query }) {
             <div className="meta">{matches?.size ? `${matches.size} NOTES` : 'CHƯA CÓ GÌ Ở ĐÂY'}</div>
           </>
         ) : (
-          <>
-            <p>{QUOTE}</p>
-            <div className="meta">— {QUOTE_BY}</div>
-          </>
+          <div className="quote-tap" onClick={() => quotes?.length > 1 && setQIdx((i) => (i + 1) % quotes.length)} title="Bấm để đổi câu nói">
+            <p>{activeQuote.text}</p>
+            <div className="meta">— {activeQuote.by}</div>
+          </div>
         )}
       </div>
       <div className="persp">
@@ -417,14 +516,14 @@ function Card({ n, onOpen, elRef, flat }) {
         {n.image ? <img src={n.thumb} alt="" draggable="false" onLoad={(e) => e.target.classList.add('on')} ref={(el) => el?.complete && el.classList.add('on')} /> : <span>{n.summary}</span>}
       </div>
       <div className="caption">
-        <b>{pad3(n.id)}</b>
+        <b>{pad3(n.id)}{n.status && STATUS_META[n.status] ? ' ' + STATUS_META[n.status].icon : ''}</b>
         <span>{n.title}</span>
       </div>
     </article>
   );
 }
 
-function Reader({ note, notes, onClose, onOpen }) {
+function Reader({ note, notes, onClose, onOpen, theme }) {
   const idx = notes.findIndex((n) => n.slug === note.slug);
   const prev = notes[(idx - 1 + notes.length) % notes.length];
   const next = notes[(idx + 1) % notes.length];
@@ -433,6 +532,18 @@ function Reader({ note, notes, onClose, onOpen }) {
   const [, forceRender] = useState(0);
   const bigRef = useRef(null);
   const first = useRef(true);
+
+  // Lazy-load Mermaid chỉ khi note có sơ đồ ```mermaid
+  useEffect(() => {
+    const root = body.current;
+    if (!root) return;
+    const nodes = root.querySelectorAll('.mermaid');
+    if (!nodes.length) return;
+    import('mermaid').then(({ default: mermaid }) => {
+      mermaid.initialize({ startOnLoad: false, theme: theme === 'dark' ? 'dark' : 'neutral' });
+      mermaid.run({ nodes });
+    }).catch(() => {});
+  }, [note.slug, note.html, theme]);
 
   // FLIP: ảnh bay từ card trên canvas vào cột trái
   useEffect(() => {
@@ -473,8 +584,18 @@ function Reader({ note, notes, onClose, onOpen }) {
         </div>
         <CoverTools note={note} onChanged={() => forceRender((x) => x + 1)} />
         <div className="right" ref={body}>
-          <div className="meta">
-            ({pad3(note.id)}) NOTE · {new Date(note.date).toLocaleDateString('vi-VN')}
+          <div className="meta reader-meta">
+            <span>
+              ({pad3(note.id)}) TẠO {new Date(note.created || note.date).toLocaleDateString('vi-VN')}
+              {note.updated && note.created && note.updated.slice(0, 10) !== note.created.slice(0, 10)
+                ? ` · CẬP NHẬT ${new Date(note.updated).toLocaleDateString('vi-VN')}`
+                : ''}
+            </span>
+            {note.status && STATUS_META[note.status] && (
+              <span className="status-badge">
+                {STATUS_META[note.status].icon} {STATUS_META[note.status].label}
+              </span>
+            )}
             <button
               className="copy"
               onClick={() => navigator.clipboard.writeText(location.href).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1200); })}
@@ -485,6 +606,7 @@ function Reader({ note, notes, onClose, onOpen }) {
           <h1>{note.title}</h1>
           <div className="tags">{note.tags.map((t) => <span key={t}>#{t}</span>)}</div>
           <div className="prose" onClick={onBodyClick} dangerouslySetInnerHTML={{ __html: note.html }} />
+          <LocalGraph note={note} notes={notes} onOpen={onOpen} />
           {backlinks.length > 0 && (
             <div className="backlinks">
               <div className="meta">LINKED FROM</div>
@@ -499,6 +621,42 @@ function Reader({ note, notes, onClose, onOpen }) {
         </div>
       </div>
     </dialog>
+  );
+}
+
+function LocalGraph({ note, notes, onOpen }) {
+  const neighborSlugs = [...new Set([...(note.links || []), ...(note.backlinks || [])])];
+  const neighbors = neighborSlugs.map((s) => notes.find((n) => n.slug === s)).filter(Boolean);
+  if (!neighbors.length) return null;
+
+  const W = 440, H = 200, cx = W / 2, cy = H / 2, rx = 150, ry = 68;
+  return (
+    <section className="local-graph">
+      <div className="meta">SƠ ĐỒ LIÊN KẾT ({neighbors.length})</div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="graph-svg">
+        {neighbors.map((nb, i) => {
+          const a = (i / neighbors.length) * Math.PI * 2 - Math.PI / 2;
+          const x = cx + Math.cos(a) * rx;
+          const y = cy + Math.sin(a) * ry;
+          return <line key={nb.slug} x1={cx} y1={cy} x2={x} y2={y} className="g-edge" />;
+        })}
+        <g className="g-node g-center">
+          <circle cx={cx} cy={cy} r={8} />
+          <text x={cx} y={cy + 22} textAnchor="middle">{note.title.slice(0, 26)}</text>
+        </g>
+        {neighbors.map((nb, i) => {
+          const a = (i / neighbors.length) * Math.PI * 2 - Math.PI / 2;
+          const x = cx + Math.cos(a) * rx;
+          const y = cy + Math.sin(a) * ry;
+          return (
+            <g key={nb.slug} className="g-node g-link" onClick={() => onOpen(nb.slug)}>
+              <circle cx={x} cy={y} r={6} />
+              <text x={x} y={y + (y < cy ? -12 : 18)} textAnchor="middle">{nb.title.slice(0, 24)}</text>
+            </g>
+          );
+        })}
+      </svg>
+    </section>
   );
 }
 
