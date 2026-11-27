@@ -6,6 +6,7 @@ aliases:
   - Chiêu Minh Đại vương
 tags:
   - lich-su/nhan-vat
+image: "/covers/tran-quang-khai-cover-1795794394158.jpg"
 ---
 
 ## 💡 Nội dung
