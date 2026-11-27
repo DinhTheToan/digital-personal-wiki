@@ -267,9 +267,18 @@ function Canvas({ notes, matches, onOpen, dim, query }) {
   const pos = useRef([]);
   const maxZ = (notes.length - 1) * SPACING;
 
+  const [narrow, setNarrow] = useState(innerWidth < 600);
   useEffect(() => {
+    const f = () => setNarrow(innerWidth < 600);
+    addEventListener('resize', f);
+    return () => removeEventListener('resize', f);
+  }, []);
+
+  useEffect(() => {
+    if (narrow) return;
     const c = cam.current;
     const vp = viewport.current;
+    if (!vp || !world.current) return;
     let raf, drag = null, moved = 0;
 
     const onWheel = (e) => {
@@ -311,6 +320,7 @@ function Canvas({ notes, matches, onOpen, dim, query }) {
       c.x += (c.tx - c.x) * 0.09;
       c.y += (c.ty - c.y) * 0.09;
       c.z += (c.tz - c.z) * 0.09;
+      if (!world.current) return;
       world.current.style.transform = `translate3d(${-c.x}px, ${-c.y}px, ${c.z}px)`;
 
       // ring layout cho các card khớp
@@ -358,15 +368,9 @@ function Canvas({ notes, matches, onOpen, dim, query }) {
       vp.removeEventListener('click', onClickCap, true);
       removeEventListener('cam-reset', reset);
     };
-  }, [notes, base, maxZ]);
+  }, [notes, base, maxZ, narrow]);
 
-  // mobile: lưới 2 cột khi đang tìm
-  const [narrow, setNarrow] = useState(innerWidth < 600);
-  useEffect(() => {
-    const f = () => setNarrow(innerWidth < 600);
-    addEventListener('resize', f);
-    return () => removeEventListener('resize', f);
-  }, []);
+  // mobile: lưới 2 cột
   if (narrow) {
     const list = matches ? notes.filter((n) => matches.has(n.id)) : notes;
     return (
