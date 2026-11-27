@@ -38,44 +38,61 @@ function useStore() {
 let fromRect = null; // rect của card được bấm, dùng cho hiệu ứng morph
 const pad3 = (n) => String(n).padStart(3, '0');
 const noteFromPath = () => (location.pathname.startsWith('/n/') ? decodeURIComponent(location.pathname.slice(3)) : null);
+// /topics -> {tag:null}; /topics/<tag> -> {tag}; còn lại null
+const galleryFromPath = () => {
+  if (location.pathname === '/topics' || location.pathname === '/topics/') return { tag: null };
+  if (location.pathname.startsWith('/topics/')) return { tag: decodeURIComponent(location.pathname.slice(8)) };
+  return null;
+};
+let backPath = '/'; // nơi quay về khi đóng bài đọc
 
 export default function App() {
   const { notes, mini } = useStore();
   const [query, setQuery] = useState(() => new URLSearchParams(location.search).get('q') || '');
   const [open, setOpen] = useState(noteFromPath);
+  const [gallery, setGallery] = useState(galleryFromPath);
 
-  // đồng bộ URL
+  // đồng bộ URL (chỉ khi đang ở canvas)
   useEffect(() => {
-    if (open) return;
+    if (open || gallery) return;
     const u = new URL(location.href);
     query ? u.searchParams.set('q', query) : u.searchParams.delete('q');
     history.replaceState(null, '', u);
-  }, [query, open]);
-  useEffect(() => {
-    const f = () => setOpen(noteFromPath());
-    addEventListener('popstate', f);
-    return () => removeEventListener('popstate', f);
+  }, [query, open, gallery]);
+  const syncFromLocation = useCallback(() => {
+    setOpen(noteFromPath());
+    setGallery(galleryFromPath());
   }, []);
+  useEffect(() => {
+    addEventListener('popstate', syncFromLocation);
+    return () => removeEventListener('popstate', syncFromLocation);
+  }, [syncFromLocation]);
+
+  const go = useCallback((path) => {
+    history.pushState(null, '', path);
+    syncFromLocation();
+  }, [syncFromLocation]);
 
   const openNote = useCallback((slug, rect) => {
     fromRect = rect || null;
+    if (!location.pathname.startsWith('/n/')) backPath = location.pathname + location.search;
     history.pushState(null, '', '/n/' + slug);
     setOpen(slug);
   }, []);
-  const closeNote = useCallback(() => {
-    history.pushState(null, '', query ? '/?q=' + encodeURIComponent(query) : '/');
-    setOpen(null);
-  }, [query]);
+  const closeNote = useCallback(() => go(backPath || '/'), [go]);
+  const openGallery = useCallback((tag) => go(tag ? '/topics/' + encodeURIComponent(tag) : '/topics'), [go]);
+  const closeGallery = useCallback(() => go(query ? '/?q=' + encodeURIComponent(query) : '/'), [go, query]);
 
   useEffect(() => {
     const f = (e) => {
       if (e.key !== 'Escape') return;
       if (open) closeNote();
+      else if (gallery) gallery.tag ? openGallery(null) : closeGallery();
       else setQuery('');
     };
     addEventListener('keydown', f);
     return () => removeEventListener('keydown', f);
-  }, [open, closeNote]);
+  }, [open, gallery, closeNote, openGallery, closeGallery]);
 
   const matches = useMemo(() => {
     if (!notes || !mini || !query.trim()) return null;
@@ -89,20 +106,31 @@ export default function App() {
   return (
     <>
       <Canvas notes={notes} matches={matches} onOpen={openNote} dim={!!current} query={query} />
-      <Chrome notes={notes} query={query} setQuery={setQuery} count={matches?.size} />
+      {gallery && <Gallery notes={notes} tag={gallery.tag} onTag={openGallery} onOpen={openNote} />}
+      <Chrome
+        notes={notes} query={query} setQuery={setQuery} count={matches?.size}
+        inGallery={!!gallery}
+        onTopics={() => (gallery ? closeGallery() : openGallery(null))}
+        onHome={() => { if (gallery) closeGallery(); window.dispatchEvent(new Event('cam-reset')); }}
+      />
       {current && <Reader note={current} notes={notes} onClose={closeNote} onOpen={openNote} />}
     </>
   );
 }
 
-function Chrome({ notes, query, setQuery, count }) {
+function Chrome({ notes, query, setQuery, count, inGallery, onTopics, onHome }) {
   return (
     <>
-      <button className="brand" onClick={() => window.dispatchEvent(new Event('cam-reset'))}>
+      <button className="brand" onClick={onHome}>
         digital.wiki
       </button>
-      <div className="meta tr">NOTES ({pad3(notes.length)})</div>
-      <div className="dock">
+      <div className="meta tr">
+        <button className={'topics-btn' + (inGallery ? ' on' : '')} onClick={onTopics}>
+          {inGallery ? 'CANVAS ×' : 'TOPICS'}
+        </button>
+        NOTES ({pad3(notes.length)})
+      </div>
+      {!inGallery && <div className="dock">
         <label className="pill">
           <span className="badge">SEARCH</span>
           <input type="search" placeholder="bất cứ điều gì…" value={query} onChange={(e) => setQuery(e.target.value)} />
@@ -112,9 +140,68 @@ function Chrome({ notes, query, setQuery, count }) {
             </button>
           )}
         </label>
-      </div>
-      {query && <div className="meta br">ESC ĐỂ XÓA</div>}
+      </div>}
+      {query && !inGallery && <div className="meta br">ESC ĐỂ XÓA</div>}
     </>
+  );
+}
+
+function Gallery({ notes, tag, onTag, onOpen }) {
+  const topics = useMemo(() => {
+    const m = new Map();
+    for (const n of notes) for (const t of n.tags) (m.get(t) || m.set(t, []).get(t)).push(n);
+    return [...m].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]));
+  }, [notes]);
+  const list = tag ? notes.filter((n) => n.tags.includes(tag)) : [];
+
+  return (
+    <div className="gallery">
+      <div className="gal-inner">
+        {!tag ? (
+          <>
+            <div className="meta">TOPICS ({pad3(topics.length)})</div>
+            <h1 className="gal-title">Chủ đề</h1>
+            {topics.length === 0 && <p className="gal-empty">Chưa có chủ đề nào. Thêm <code>tags</code> vào note trong Obsidian.</p>}
+            <div className="topic-grid">
+              {topics.map(([t, ns]) => (
+                <button key={t} className="topic" onClick={() => onTag(t)}>
+                  <div className="stack">
+                    {ns.slice(0, 3).map((n, i) => (
+                      <div
+                        key={n.id}
+                        className={'mini' + (n.image ? '' : ' plate')}
+                        style={{
+                          transform: `translate(${i * 14}px, ${i * -8}px) rotate(${(i - 1) * 3}deg)`,
+                          zIndex: 3 - i,
+                          backgroundImage: n.thumb ? `url(${n.thumb})` : n.lqip ? `url(${n.lqip})` : undefined,
+                        }}
+                      >
+                        {!n.image && <span>{n.title}</span>}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="topic-name">
+                    <span>#{t}</span>
+                    <b>{pad3(ns.length)}</b>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            <button className="gal-back meta" onClick={() => onTag(null)}>← TẤT CẢ CHỦ ĐỀ</button>
+            <div className="meta">{list.length} NOTES</div>
+            <h1 className="gal-title">#{tag}</h1>
+            <div className="gal-grid">
+              {list.map((n) => (
+                <Card key={n.id} n={n} onOpen={onOpen} flat />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 

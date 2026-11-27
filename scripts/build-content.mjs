@@ -91,7 +91,7 @@ export async function buildContent() {
       name,
       slug: slugify(fm.slug || name),
       title: fm.title || name,
-      tags: [].concat(fm.tags || []).filter(Boolean).map(String),
+      tags: [...new Set([].concat(fm.tags || [], fm['chủ_đề'] || fm.topic || []).filter(Boolean).map(String))],
       aliases: [].concat(fm.aliases || []).filter(Boolean).map(String),
       date: fm.date ? new Date(fm.date).toISOString() : stat.mtime.toISOString(),
       fmImage: fm.image || fm.cover || null,
