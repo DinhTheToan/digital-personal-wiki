@@ -1,9 +1,11 @@
-// Theo dõi ./vault -> sau 30s không đổi sẽ tự commit & push lên GitHub (Vercel tự deploy)
+// Theo dõi ./DTT Digital Garden và ./covers -> sau 30s không đổi sẽ tự commit & push lên GitHub (Vercel tự deploy)
 import fs from 'node:fs';
 import path from 'node:path';
 import { execSync } from 'node:child_process';
 
 const VAULT = path.resolve('./DTT Digital Garden');
+const COVERS = path.resolve('./covers');
+fs.mkdirSync(COVERS, { recursive: true });
 let timer;
 let running = false;
 
@@ -11,8 +13,8 @@ function syncToGit() {
   if (running) return;
   running = true;
   try {
-    execSync('git add "DTT Digital Garden"', { stdio: 'ignore' });
-    const diff = execSync('git status --porcelain "DTT Digital Garden"').toString().trim();
+    execSync('git add "DTT Digital Garden" covers', { stdio: 'ignore' });
+    const diff = execSync('git status --porcelain "DTT Digital Garden" covers').toString().trim();
     if (diff) {
       execSync('git commit -m "auto: update notes"', { stdio: 'ignore' });
       execSync('git push', { stdio: 'ignore' });
@@ -26,9 +28,11 @@ function syncToGit() {
 }
 
 syncToGit();
-fs.watch(VAULT, { recursive: true }, (_, file) => {
+const onChange = (_, file) => {
   if (!file || file.startsWith('.obsidian') || file.includes(`${path.sep}.obsidian`)) return;
   clearTimeout(timer);
   timer = setTimeout(syncToGit, 30_000);
-});
-console.log('👀 Auto-publish đang chạy ngầm cho:', VAULT);
+};
+fs.watch(VAULT, { recursive: true }, onChange);
+fs.watch(COVERS, onChange);
+console.log('👀 Auto-publish đang chạy ngầm cho:', VAULT, 'và', COVERS);

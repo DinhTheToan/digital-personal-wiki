@@ -7,6 +7,7 @@ import { marked } from 'marked';
 import sharp from 'sharp';
 
 const LOCAL_VAULT = path.resolve('./DTT Digital Garden');
+const COVERS_DIR = path.resolve('./covers');
 const CFG_PATH = path.resolve('./vault.config.json');
 const OUT = path.resolve('public');
 const IMG_DIR = path.join(OUT, 'img');
@@ -67,6 +68,11 @@ export async function buildContent() {
       else if (IMG_EXT.test(e.name)) images.set(e.name.toLowerCase(), p);
     }
   })(LOCAL_VAULT);
+  if (fs.existsSync(COVERS_DIR)) {
+    for (const e of fs.readdirSync(COVERS_DIR, { withFileTypes: true })) {
+      if (e.isFile() && IMG_EXT.test(e.name)) images.set(e.name.toLowerCase(), path.join(COVERS_DIR, e.name));
+    }
+  }
 
   const jobs = new Map();
   const lqips = new Map();
@@ -158,9 +164,12 @@ if (process.argv.includes('--watch')) {
   const watchTarget = getExternalVault() || LOCAL_VAULT;
   let timer;
   console.log(`👀 Đang theo dõi vault: ${watchTarget}`);
-  fs.watch(watchTarget, { recursive: true }, (_, file) => {
+  const onWatch = (_, file) => {
     if (!file || file.startsWith('.') || (!/\.md$/i.test(file) && !IMG_EXT.test(file))) return;
     clearTimeout(timer);
     timer = setTimeout(() => buildContent().catch(console.error), 300);
-  });
+  };
+  fs.watch(watchTarget, { recursive: true }, onWatch);
+  fs.mkdirSync(COVERS_DIR, { recursive: true });
+  fs.watch(COVERS_DIR, onWatch);
 }

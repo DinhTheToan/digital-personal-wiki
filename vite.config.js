@@ -5,6 +5,7 @@ import path from 'node:path';
 import matter from 'gray-matter';
 
 const VAULT = path.resolve('./DTT Digital Garden');
+const COVERS = path.resolve('./covers');
 const slugify = (s) =>
   s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D')
     .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'note';
@@ -29,7 +30,7 @@ function findNote(slug) {
 function setImage(file, value) {
   let t = fs.readFileSync(file, 'utf8');
   const eol = t.includes('\r\n') ? '\r\n' : '\n';
-  const line = value ? `image: "[[${value}]]"` : null;
+  const line = value ? `image: "/covers/${value}"` : null;
   const m = t.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   if (!m) {
     if (line) t = `---${eol}${line}${eol}---${eol}${eol}` + t;
@@ -59,9 +60,8 @@ const coverApi = {
       req.on('end', () => {
         const ext = (decodeURIComponent(req.headers['x-filename'] || '').match(/\.(png|jpe?g|webp|gif|avif)$/i) || ['.png'])[0].toLowerCase();
         const name = `${slug}-cover-${Date.now()}${ext}`;
-        const dir = path.join(VAULT, 'Attachments');
-        fs.mkdirSync(dir, { recursive: true });
-        fs.writeFileSync(path.join(dir, name), Buffer.concat(chunks));
+        fs.mkdirSync(COVERS, { recursive: true });
+        fs.writeFileSync(path.join(COVERS, name), Buffer.concat(chunks));
         setImage(file, name);
         done(200, name);
       });
@@ -72,7 +72,7 @@ const coverApi = {
 export default defineConfig({
   server: {
     watch: {
-      ignored: ['**/DTT Digital Garden/**'],
+      ignored: ['**/DTT Digital Garden/**', '**/covers/**'],
     },
   },
   plugins: [
