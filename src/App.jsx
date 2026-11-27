@@ -491,6 +491,7 @@ function Reader({ note, notes, onClose, onOpen }) {
               {backlinks.map((b) => <a key={b.slug} href={'/n/' + b.slug} onClick={(e) => { e.preventDefault(); onOpen(b.slug); }}>{b.title}</a>)}
             </div>
           )}
+          <Comments slug={note.slug} />
           <nav className="prevnext">
             <button onClick={() => onOpen(prev.slug)}>← {prev.title}</button>
             <button onClick={() => onOpen(next.slug)}>{next.title} →</button>
@@ -650,5 +651,111 @@ function CoverTools({ note, onChanged }) {
       {note.image && !busy && <button onClick={remove}>Xóa ảnh</button>}
       <span>{msg || (!busy && 'hoặc kéo thả ảnh vào đây')}</span>
     </div>
+  );
+}
+
+function Comments({ slug }) {
+  const [list, setList] = useState([]);
+  const [name, setName] = useState(() => localStorage.getItem('commentName') || '');
+  const [text, setText] = useState('');
+  const [website, setWebsite] = useState(''); // honeypot
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [admin, setAdmin] = useState(!!getPw());
+
+  useEffect(() => {
+    const f = () => setAdmin(!!getPw());
+    addEventListener('storage', f);
+    addEventListener('admin-change', f);
+    return () => { removeEventListener('storage', f); removeEventListener('admin-change', f); };
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    setErr('');
+    fetch('/api/comments?slug=' + encodeURIComponent(slug))
+      .then((r) => r.json().then((j) => ({ ok: r.ok, j })))
+      .then(({ ok, j }) => {
+        if (!alive) return;
+        setList(Array.isArray(j.comments) ? j.comments : []);
+        if (!ok && j.error) setErr(j.error);
+      })
+      .catch(() => { if (alive) setList([]); });
+    return () => { alive = false; };
+  }, [slug]);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!text.trim() || busy) return;
+    setBusy(true);
+    setErr('');
+    try {
+      if (name.trim()) localStorage.setItem('commentName', name.trim());
+      const r = await fetch('/api/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug, name, text, website }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || 'Không gửi được bình luận');
+      if (j.comment) setList((prev) => [...prev, j.comment]);
+      setText('');
+    } catch (ex) {
+      setErr(ex.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const del = async (id) => {
+    const r = await fetch('/api/comments', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug, id, password: getPw() }),
+    });
+    if (r.ok) setList((prev) => prev.filter((c) => c.id !== id));
+  };
+
+  return (
+    <section className="comments">
+      <div className="meta">BÌNH LUẬN ({list.length})</div>
+      <form className="cmt-form" onSubmit={submit}>
+        <input
+          type="text"
+          placeholder="Tên của bạn (để trống = Ẩn danh)"
+          maxLength={50}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <input type="text" value={website} onChange={(e) => setWebsite(e.target.value)} tabIndex={-1} autoComplete="off" style={{ display: 'none' }} />
+        <textarea
+          rows={3}
+          placeholder="Viết bình luận của bạn…"
+          maxLength={1000}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          required
+        />
+        <div className="cmt-actions">
+          <button type="submit" disabled={busy || !text.trim()}>
+            {busy ? 'Đang gửi…' : 'Gửi bình luận'}
+          </button>
+          {err && <span className="cmt-err">{err}</span>}
+        </div>
+      </form>
+      <div className="cmt-list">
+        {list.length === 0 && !err && <div className="cmt-empty">Chưa có bình luận nào. Hãy là người đầu tiên!</div>}
+        {list.map((c) => (
+          <div key={c.id} className="cmt-item">
+            <div className="cmt-head">
+              <b>{c.name}</b>
+              <span>{new Date(c.createdAt).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' })}</span>
+              {admin && <button className="cmt-del" onClick={() => del(c.id)}>Xóa</button>}
+            </div>
+            <p>{c.text}</p>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
