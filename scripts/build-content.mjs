@@ -91,7 +91,7 @@ export async function buildContent() {
       name,
       slug: slugify(fm.slug || name),
       title: fm.title || name,
-      tags: [...new Set([].concat(fm.tags || [], fm['chủ_đề'] || fm.topic || []).filter(Boolean).map(String))],
+      tags: [...new Set([].concat(fm.tags || []).filter(Boolean).map((t) => String(t).replace(/^#/, '').replace(/^\/+|\/+$/g, '')))],
       aliases: [].concat(fm.aliases || []).filter(Boolean).map(String),
       date: fm.date ? new Date(fm.date).toISOString() : stat.mtime.toISOString(),
       fmImage: fm.image || fm.cover || null,
@@ -145,7 +145,7 @@ export async function buildContent() {
     lqip: lqips.get(n.image) || null, html: n.html,
     backlinks: [...backlinks.get(n.slug)],
   }));
-  fs.writeFileSync(path.join(OUT, 'content.json'), JSON.stringify({ built: new Date().toISOString(), notes: out }));
+  fs.writeFileSync(path.join(OUT, 'content.json'), JSON.stringify({ built: new Date().toISOString(), labels: fs.existsSync('topic-labels.json') ? JSON.parse(fs.readFileSync('topic-labels.json', 'utf8').replace(/^\uFEFF/, '')) : {}, notes: out }));
   fs.writeFileSync(path.join(OUT, 'search.json'), JSON.stringify(notes.map((n, i) => ({
     id: i + 1, title: n.title, tags: n.tags.join(' '), summary: n.summary, body: n.plain,
   }))));

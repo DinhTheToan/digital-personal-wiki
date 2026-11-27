@@ -137,3 +137,9 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .gal-grid .card { position: relative; width: auto; transition: transform 0.25s, box-shadow 0.25s; }
 .gal-grid .card:hover { transform: translateY(-4px); box-shadow: 0 14px 34px rgba(0, 0, 0, 0.08); }
 @media (max-width: 600px) { .gal-inner { padding: 80px 16px 60px; } .topic-grid, .gal-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; } .stack { height: 140px; } .mini { width: 90px; } }
+
+.crumbs { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 6px; }
+.crumbs button { font: inherit; letter-spacing: inherit; color: var(--ink-60); }
+.crumbs button:hover { color: var(--ink); }
+.crumbs button:last-child:not(:first-child), .crumbs span + button:last-child { color: var(--ink); }
+.gal-sub { margin: 48px 0 18px; }
