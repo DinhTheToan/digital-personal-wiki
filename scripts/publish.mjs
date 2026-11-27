@@ -8,4 +8,5 @@ if (!diff) {
   process.exit(0);
 }
 execSync('git commit -m "update notes"', { stdio: 'inherit' });
-execSync('git push', { stdio: 'inherit' });
+execSync('git pull --rebase --autostash', { stdio: 'ignore' });
+      execSync('git push', { stdio: 'inherit' });

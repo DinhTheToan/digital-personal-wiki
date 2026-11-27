@@ -49,6 +49,7 @@ const galleryFromPath = () => {
 let backPath = '/'; // nơi quay về khi đóng bài đọc
 
 export default function App() {
+  useEffect(initAdmin, []);
   const { notes, mini, labels } = useStore();
   const [query, setQuery] = useState(() => new URLSearchParams(location.search).get('q') || '');
   const [open, setOpen] = useState(noteFromPath);
@@ -425,6 +426,7 @@ function Reader({ note, notes, onClose, onOpen }) {
   const next = notes[(idx + 1) % notes.length];
   const body = useRef(null);
   const [copied, setCopied] = useState(false);
+  const [, forceRender] = useState(0);
   const bigRef = useRef(null);
   const first = useRef(true);
 
@@ -465,7 +467,7 @@ function Reader({ note, notes, onClose, onOpen }) {
             {note.image ? <img src={note.image} alt="" onLoad={(e) => e.target.classList.add('on')} ref={(el) => el?.complete && el.classList.add('on')} /> : <span>{pad3(note.id)}</span>}
           </div>
         </div>
-        {import.meta.env.DEV && <CoverTools note={note} />}
+        <CoverTools note={note} onChanged={() => forceRender((x) => x + 1)} />
         <div className="right" ref={body}>
           <div className="meta">
             ({pad3(note.id)}) NOTE · {new Date(note.date).toLocaleDateString('vi-VN')}
@@ -495,33 +497,146 @@ function Reader({ note, notes, onClose, onOpen }) {
   );
 }
 
-// Chỉ hiện khi chạy `npm run dev` (máy bạn): thêm/đổi/xóa ảnh bìa cho note, tự ghi vào vault
-function CoverTools({ note }) {
+// ---- Admin: chèn ảnh bìa ----
+// Local (`npm run dev`): ghi thẳng vào thư mục covers/. Online: gọi /api/cover (cần mật khẩu admin).
+const getPw = () => localStorage.getItem('adminPw');
+
+// Vào https://<web>/?admin hoặc bấm nút Admin nhỏ góc dưới trái để đăng nhập, ?logout để thoát
+async function promptAdminLogin() {
+  const pw = prompt('Mật khẩu admin:');
+  if (!pw) return false;
+  try {
+    const r = await fetch('/api/cover', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pw, action: 'check' }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (r.ok) {
+      localStorage.setItem('adminPw', pw);
+      dispatchEvent(new Event('admin-change'));
+      return true;
+    }
+    alert(j.error || 'Sai mật khẩu');
+  } catch {
+    alert('Không gọi được API /api/cover');
+  }
+  return false;
+}
+
+export function initAdmin() {
+  const q = new URLSearchParams(location.search);
+  const clean = (k) => { q.delete(k); const u = new URL(location.href); u.search = q.toString(); history.replaceState(null, '', u); };
+  if (q.has('logout')) { localStorage.removeItem('adminPw'); dispatchEvent(new Event('admin-change')); clean('logout'); return; }
+  if (!q.has('admin')) return;
+  clean('admin');
+  promptAdminLogin().then((ok) => ok && alert('Đã đăng nhập admin ✓'));
+}
+
+// nén ảnh trong trình duyệt (tối đa 1600px) để gửi nhẹ và vượt giới hạn 4.5MB của Vercel
+async function compress(file) {
+  const bmp = await createImageBitmap(file);
+  const scale = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement('canvas');
+  c.width = Math.round(bmp.width * scale);
+  c.height = Math.round(bmp.height * scale);
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, c.width, c.height);
+  ctx.drawImage(bmp, 0, 0, c.width, c.height);
+  const blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.86));
+  return new Promise((res) => {
+    const fr = new FileReader();
+    fr.onload = () => res(fr.result.split(',')[1]);
+    fr.readAsDataURL(blob);
+  });
+}
+
+function CoverTools({ note, onChanged }) {
+  const isDev = import.meta.env.DEV;
   const input = useRef(null);
   const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [admin, setAdmin] = useState(!!getPw());
+  useEffect(() => {
+    const f = () => setAdmin(!!getPw());
+    addEventListener('storage', f);
+    addEventListener('admin-change', f);
+    return () => { removeEventListener('storage', f); removeEventListener('admin-change', f); };
+  }, []);
+
+  const online = async (body) => {
+    const r = await fetch('/api/cover', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: getPw(), slug: note.slug, ...body }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (r.status === 401) { localStorage.removeItem('adminPw'); setAdmin(false); }
+    if (!r.ok) throw new Error(j.error || 'Lỗi ' + r.status);
+  };
+
   const send = async (file) => {
     if (!file || !/^image\//.test(file.type)) return;
     setBusy(true);
-    await fetch('/__api/cover?slug=' + encodeURIComponent(note.slug), {
-      method: 'POST',
-      headers: { 'x-filename': encodeURIComponent(file.name) },
-      body: file,
-    });
-    // vite sẽ tự reload khi content.json được build lại
-    setTimeout(() => setBusy(false), 6000);
+    setMsg('');
+    try {
+      if (isDev) {
+        await fetch('/__api/cover?slug=' + encodeURIComponent(note.slug), {
+          method: 'POST', headers: { 'x-filename': encodeURIComponent(file.name) }, body: file,
+        });
+        setTimeout(() => setBusy(false), 6000);
+      } else {
+        await online({ action: 'set', imageBase64: await compress(file), filename: 'cover.jpg' });
+        const preview = URL.createObjectURL(file);
+        note.image = preview;
+        note.thumb = preview;
+        onChanged?.();
+        setMsg('Đã lưu lên GitHub ✓ (Vercel tự build bản vĩnh viễn sau ~45s)');
+        setBusy(false);
+      }
+    } catch (e) {
+      setMsg('Lỗi: ' + e.message);
+      setBusy(false);
+    }
   };
   const remove = async () => {
     setBusy(true);
-    await fetch('/__api/cover?slug=' + encodeURIComponent(note.slug), { method: 'DELETE' });
-    setTimeout(() => setBusy(false), 6000);
+    setMsg('');
+    try {
+      if (isDev) {
+        await fetch('/__api/cover?slug=' + encodeURIComponent(note.slug), { method: 'DELETE' });
+        setTimeout(() => setBusy(false), 6000);
+      } else {
+        await online({ action: 'remove' });
+        note.image = null;
+        note.thumb = null;
+        note.lqip = null;
+        onChanged?.();
+        setMsg('Đã xóa ✓ (Vercel tự build lại sau ~45s)');
+        setBusy(false);
+      }
+    } catch (e) {
+      setMsg('Lỗi: ' + e.message);
+      setBusy(false);
+    }
   };
+  const canEdit = isDev || admin;
   useEffect(() => {
+    if (!canEdit) return;
     const over = (e) => e.preventDefault();
     const drop = (e) => { e.preventDefault(); send(e.dataTransfer.files[0]); };
     addEventListener('dragover', over);
     addEventListener('drop', drop);
     return () => { removeEventListener('dragover', over); removeEventListener('drop', drop); };
   });
+  if (!canEdit) {
+    return (
+      <div className="cover-tools">
+        <button className="ghost" onClick={promptAdminLogin}>Admin</button>
+      </div>
+    );
+  }
   return (
     <div className="cover-tools">
       <input ref={input} type="file" accept="image/*" hidden onChange={(e) => send(e.target.files[0])} />
@@ -529,7 +644,7 @@ function CoverTools({ note }) {
         {busy ? 'Đang xử lý…' : note.image ? 'Đổi ảnh bìa' : '+ Thêm ảnh bìa'}
       </button>
       {note.image && !busy && <button onClick={remove}>Xóa ảnh</button>}
-      {!busy && <span>hoặc kéo thả ảnh vào đây</span>}
+      <span>{msg || (!busy && 'hoặc kéo thả ảnh vào đây')}</span>
     </div>
   );
 }

@@ -17,6 +17,7 @@ function syncToGit() {
     const diff = execSync('git status --porcelain "DTT Digital Garden" covers').toString().trim();
     if (diff) {
       execSync('git commit -m "auto: update notes"', { stdio: 'ignore' });
+      execSync('git pull --rebase --autostash', { stdio: 'ignore' });
       execSync('git push', { stdio: 'ignore' });
       console.log(`[${new Date().toLocaleTimeString()}] ✓ Đã tự động push note mới lên GitHub`);
     }

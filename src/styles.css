@@ -146,5 +146,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 
 .cover-tools { position: absolute; left: 40px; bottom: 26px; z-index: 2; display: flex; align-items: center; gap: 10px; font-size: 12px; }
 .cover-tools button { background: var(--accent); padding: 6px 12px; border-radius: 2px; font-weight: 600; font-size: 12px; }
+.cover-tools button.ghost { background: transparent; color: var(--ink-45); font-weight: 500; padding: 4px 6px; opacity: 0.45; }
+.cover-tools button.ghost:hover { opacity: 1; color: var(--ink); }
 .cover-tools button:disabled { opacity: 0.6; cursor: default; }
 .cover-tools span { color: var(--ink-45); }
